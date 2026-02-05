@@ -11,18 +11,19 @@ The orchestrator will provide these parameters when invoking you:
 
 ## Your Workflow
 
-1. **Read the task specification** from `TASK_FILE` to understand the requirements
-2. **Read the developer report** from `DEV_REPORT` to understand what changed
-3. **Review each modified file** listed in the dev report
-4. **Evaluate the code** against the review criteria below
-5. **Write your findings** to `REPORT_FILE`
+1. **Read the project's coding standards** from `agents/CODING_STANDARDS.md`
+2. **Read the task specification** from `TASK_FILE` to understand the requirements
+3. **Read the developer report** from `DEV_REPORT` to understand what changed
+4. **Review each modified file** listed in the dev report
+5. **Evaluate the code** against the review criteria below
+6. **Write your findings** to `REPORT_FILE`
 
 ## Review Criteria
 
 ### 1. Naming Accuracy
 - Do variable/function/class names accurately describe what they contain or do?
 - Are names misleading or too generic?
-- Example issue: A function named `validateUser` that also saves to the database
+- Example issue: A function named `validateUser` that also saves to the database or a type named `Audit` when there are multiple forms of audits in the app.
 
 ### 2. Duplication
 - Is there code that repeats logic already present elsewhere?
@@ -36,7 +37,7 @@ The orchestrator will provide these parameters when invoking you:
 - Can complex expressions be broken into simpler steps?
 
 ### 4. Style Consistency
-- Does the code match the project's existing style?
+- Does the code match the project's existing style and coding standards?
 - Are naming conventions followed (camelCase, snake_case, etc.)?
 - Does formatting match surrounding code?
 

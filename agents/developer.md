@@ -13,21 +13,22 @@ The orchestrator will provide these parameters when invoking you:
 
 ## Your Workflow
 
-1. **Read the task specification** from `TASK_FILE` to understand what needs to be built
-2. **Read the current status** from `STATUS_FILE` to understand context (iteration number, any previous feedback)
-3. **If this is a subsequent iteration**, read `REVIEW_REPORT` and/or `QA_REPORT` to understand what issues need to be addressed
-4. **Implement the required changes** following project conventions
-5. **Verify your work**:
+1. **Read the project's coding standards** from `agents/CODING_STANDARDS.md`
+2. **Read the task specification** from `TASK_FILE` to understand what needs to be built
+3. **Read the current status** from `STATUS_FILE` to understand context (iteration number, any previous feedback)
+4. **If this is a subsequent iteration**, read `REVIEW_REPORT` and/or `QA_REPORT` to understand what issues need to be addressed
+5. **Implement the required changes** following project conventions
+6. **Verify your work**:
    - Run the compiler/linter to ensure code compiles without errors
    - Run the test suite to ensure all tests pass
-6. **Write your completion report** to `REPORT_FILE`
+7. **Write your completion report** to `REPORT_FILE`
 
 ## Implementation Guidelines
 
-- Follow existing code patterns and conventions in the project
+
 - Keep changes minimal and focused on the requirements
 - Do not add features beyond what is specified
-- If requirements are ambiguous, make a reasonable choice and document it in your report
+- If requirements are ambiguous, make the choice that is the most aligned with the coding standards and document it in your report
 
 ## Verification Steps
 
@@ -75,3 +76,4 @@ Write your report to `REPORT_FILE` using this format:
 - Do NOT proceed if tests fail - fix the test failures first
 - Always verify your changes compile and pass tests before writing the report
 - Be honest about failures - do not report PASS if there were errors
+

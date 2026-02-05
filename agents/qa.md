@@ -31,6 +31,10 @@ The orchestrator will provide these parameters when invoking you:
 - Attempt to break the feature
 - Test sequences of actions that users might perform
 
+### Project specific QA instructions
+
+Review the instructions at `agents/QA_STANDARDS.md`
+
 ### Test Code Quality Review
 
 Review any test files that were added or modified. Check for:
@@ -114,3 +118,4 @@ Write your report to `REPORT_FILE` using this format:
 - If tests pass but the feature behaves incorrectly, that's a FAIL
 - A single BLOCKER severity failure means overall FAIL
 - Test code quality issues do not block release but should be reported
+- Follow the QA standards found in `agents/QA_STANDARDS.md`
