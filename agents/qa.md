@@ -49,6 +49,10 @@ Review any test files that were added or modified. Check for:
 
 4. **Meaningful Test Names**: Test names should describe the scenario and expected outcome
 
+5. **Test Validity**: Does the test actually do what its description says? Tests often claim to be asserting something that is not actually validated in the assertions.
+
+6. **Assert Failures**: Do we have test cases that demonstrate when failure will occur? It's important to prove that operations fail in the way we expect them to.
+
 ## Report Format
 
 Write your report to `REPORT_FILE` using this format:

@@ -34,12 +34,14 @@ Report files (where `N` is the current iteration number):
 ```
 ASK → [planning] → dev → review → qa → COMPLETE
                     ↑      |       |
-                    |      |       |
+                    |      v       |
                     +------+-------+
-                    (on failure, return to dev)
+                    (on failure, return to dev, then back through review)
 ```
 
 Where `[planning]` is optional - only invoked if the user describes a new task.
+
+**Important:** All paths back to `dev` must proceed through `review` before returning to `qa`. The reviewer must verify fixes before QA re-tests.
 
 ### Phase: `ask`
 - Use AskUserQuestion to ask the user what they want to work on
@@ -61,7 +63,7 @@ Where `[planning]` is optional - only invoked if the user describes a new task.
 - Invoke the Developer agent using the Task tool
 - After completion, read developer report
 - If build or tests FAIL → stay in `dev`, increment iteration, invoke Developer again
-- If PASS → transition to `review` phase
+- If PASS → transition to `review` phase (always, regardless of whether dev was fixing review feedback or QA failures)
 
 ### Phase: `review`
 - Invoke the Developer Review agent using the Task tool
@@ -72,11 +74,12 @@ Where `[planning]` is optional - only invoked if the user describes a new task.
 ### Phase: `qa`
 - Invoke the QA agent using the Task tool
 - After completion, read QA report
-- If FAIL → transition to `dev` phase, increment iteration
+- If FAIL → transition to `dev` phase, increment iteration (dev will then go to review before returning to qa)
 - If PASS → transition to `complete` phase
 
 ### Phase: `complete`
 - Write final status update
+- Move the task file from `tasks/{task-name}.md` to `tasks/completed/{task-name}.md`
 - Report success to the user
 
 ## Invoking Sub-Agents
@@ -227,15 +230,25 @@ Last Updated: [ISO timestamp]
 
 4. **QA Failures**: Any BLOCKER severity issue means FAIL.
 
+5. **Review Required After Dev**: Developer work must always be reviewed before QA testing. Never send dev fixes directly to QA - the flow is always dev → review → qa.
+
 ## Important
 
-- You coordinate, you do NOT implement. Never write code directly.
+- You coordinate, you do NOT implement. Never write code or carry out testing directly.
 - Always read reports completely before making decisions
 - Update status.md BEFORE invoking the next agent
 - Include clear history entries so the workflow can be understood
 - If stuck in a loop (same issue recurring), escalate to user with details
 - Always pass file paths as parameters to sub-agents - never assume paths
 - Use iteration numbers in all report filenames to preserve history
+
+## Task File Organization
+
+Task files in the `tasks/` directory are organized as follows:
+- **Active tasks**: `tasks/{task-name}.md` - tasks that still need work
+- **Completed tasks**: `tasks/completed/{task-name}.md` - tasks that are done
+
+When a task reaches the `complete` phase, move the task file into the `tasks/completed/` subdirectory. This keeps active tasks visible at the top level.
 
 ## Starting the Workflow
 
@@ -260,7 +273,7 @@ When first invoked:
 
 4. **Parse `TASK_FILE`** to extract task name (e.g., `tasks/feature-a.md` → `feature-a`)
 
-5. **Create workspace directory**: `workspaces/{task-name}/reports/`
+5. **Create directories** if they don't exist: `tasks/completed/`, `workspaces`, `workspaces/{task-name}/reports/`
 
 6. **Initialize `workspaces/{task-name}/status.md`**
 
