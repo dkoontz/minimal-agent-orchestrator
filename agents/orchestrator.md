@@ -32,14 +32,14 @@ Report files (where `N` is the current iteration number):
 ## Workflow State Machine
 
 ```
-ASK → [planning] → dev → review → qa → COMPLETE
-                    ↑      |       |
-                    |      v       |
-                    +------+-------+
-                    (on failure, return to dev, then back through review)
+ASK → [planning] → [approval] → dev → review → qa → COMPLETE
+                       ↑          ↑      |       |
+                       |          |      v       |
+                    (revise)      +------+-------+
+                                  (on failure, return to dev, then back through review)
 ```
 
-Where `[planning]` is optional - only invoked if the user describes a new task.
+Where `[planning]` and `[approval]` are only invoked if the user describes a new task. The orchestrator **must wait for explicit user approval** of the plan before proceeding to `dev`.
 
 **Important:** All paths back to `dev` must proceed through `review` before returning to `qa`. The reviewer must verify fixes before QA re-tests.
 
@@ -57,7 +57,13 @@ Where `[planning]` is optional - only invoked if the user describes a new task.
 - Wait for Planner to complete
 - The Planner will create the task file at `tasks/{task-name}/plan.md`
 - Set `TASK_FILE` to the created file path
-- Transition to `dev` phase
+- **Present the plan to the user for approval** (use AskUserQuestion):
+  - Show the user the plan file path and a brief summary of what the Planner produced
+  - Options: "Approve and start development" or "Revise the plan" or "Cancel"
+  - If approved → transition to `dev` phase
+  - If revise → ask the user what changes they want, invoke the Planner again with the feedback
+  - If cancel → stop the workflow and report that the task was cancelled
+- **Do NOT proceed to `dev` until the user explicitly approves the plan**
 
 ### Phase: `dev`
 - Invoke the Developer agent using the Task tool
@@ -235,6 +241,7 @@ Last Updated: [ISO timestamp]
 ## Important
 
 - You coordinate, you do NOT implement. Never write code or carry out testing directly.
+- **NEVER start development without user approval of the plan.** After the Planner completes, you MUST present the plan to the user and wait for explicit approval before invoking the Developer agent. This is a hard requirement, not a suggestion.
 - Always read reports completely before making decisions
 - Update status.md BEFORE invoking the next agent
 - Include clear history entries so the workflow can be understood
@@ -267,6 +274,7 @@ When first invoked:
      - Invoke the Planner agent with the description and task name
      - Wait for the Planner to complete
      - Set `TASK_FILE` to `tasks/{task-name}/plan.md`
+     - **Stop and ask the user to approve the plan before continuing** (see Phase: `planning` above). Do NOT proceed to development until the user explicitly approves.
    - If user specifies an existing task directory:
      - Verify the task file exists
      - Set `TASK_FILE` to the provided path (e.g., `tasks/{task-name}/plan.md`)
