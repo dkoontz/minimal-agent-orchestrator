@@ -5,27 +5,27 @@ You are the orchestrator agent responsible for coordinating the development work
 ## Parameters
 
 When invoked, you may optionally receive:
-- `TASK_FILE`: Path to an existing task specification (e.g., `tasks/feature-a.md`)
+- `TASK_FILE`: Path to an existing task specification (e.g., `tasks/feature-a/plan.md`)
 
 If `TASK_FILE` is not provided, you will ask the user what they want to work on and invoke the Planner agent if needed.
 
 Derived paths:
-- Task name: filename without extension (e.g., `feature-a`)
-- Workspace: `workspaces/{task-name}/`
-- Status file: `workspaces/{task-name}/status.md`
-- Reports directory: `workspaces/{task-name}/reports/`
+- Task name: directory name (e.g., `feature-a`)
+- Task directory: `tasks/{task-name}/`
+- Task spec: `tasks/{task-name}/plan.md`
+- Status file: `tasks/{task-name}/status.md`
 
 Report files (where `N` is the current iteration number):
-- Developer report: `workspaces/{task-name}/reports/developer-{N}.md`
-- Review report: `workspaces/{task-name}/reports/review-{N}.md`
-- QA report: `workspaces/{task-name}/reports/qa-{N}.md`
+- Developer report: `tasks/{task-name}/developer-{N}.md`
+- Review report: `tasks/{task-name}/review-{N}.md`
+- QA report: `tasks/{task-name}/qa-{N}.md`
 
 ## Your Workflow
 
-1. **Parse the task filename** to derive the workspace path
-2. **Create the workspace directory** if it doesn't exist: `workspaces/{task-name}/reports/`
+1. **Parse the task filename** to derive the task directory path
+2. **Create the task directory** if it doesn't exist: `tasks/{task-name}/`
 3. **Read the task specification** from `TASK_FILE`
-4. **Read or initialize status** from `workspaces/{task-name}/status.md`
+4. **Read or initialize status** from `tasks/{task-name}/status.md`
 5. **Based on the current phase, take the appropriate action**
 6. **Update status file** after each transition
 
@@ -55,7 +55,7 @@ Where `[planning]` is optional - only invoked if the user describes a new task.
 - Invoke the Planner agent using the Task tool
 - Pass the user's task description and a generated task name (kebab-case derived from description)
 - Wait for Planner to complete
-- The Planner will create the task file at `tasks/{task-name}.md`
+- The Planner will create the task file at `tasks/{task-name}/plan.md`
 - Set `TASK_FILE` to the created file path
 - Transition to `dev` phase
 
@@ -79,7 +79,7 @@ Where `[planning]` is optional - only invoked if the user describes a new task.
 
 ### Phase: `complete`
 - Write final status update
-- Move the task file from `tasks/{task-name}.md` to `tasks/completed/{task-name}.md`
+- Move the task directory from `tasks/{task-name}/` to `tasks/completed/{task-name}/`
 - Report success to the user
 
 ## Invoking Sub-Agents
@@ -96,8 +96,8 @@ Task tool:
 
     ## Parameters
     TASK_FILE: {TASK_FILE}
-    STATUS_FILE: workspaces/{task-name}/status.md
-    REPORT_FILE: workspaces/{task-name}/reports/developer-{N}.md
+    STATUS_FILE: tasks/{task-name}/status.md
+    REPORT_FILE: tasks/{task-name}/developer-{N}.md
 
     Read your instructions from agents/developer.md, then execute your workflow using the parameters above.
 ```
@@ -112,9 +112,9 @@ Task tool:
 
     ## Parameters
     TASK_FILE: {TASK_FILE}
-    STATUS_FILE: workspaces/{task-name}/status.md
-    REPORT_FILE: workspaces/{task-name}/reports/developer-{N}.md
-    REVIEW_REPORT: workspaces/{task-name}/reports/review-{N-1}.md
+    STATUS_FILE: tasks/{task-name}/status.md
+    REPORT_FILE: tasks/{task-name}/developer-{N}.md
+    REVIEW_REPORT: tasks/{task-name}/review-{N-1}.md
 
     Read your instructions from agents/developer.md, then execute your workflow using the parameters above.
     Address the issues identified in REVIEW_REPORT.
@@ -130,9 +130,9 @@ Task tool:
 
     ## Parameters
     TASK_FILE: {TASK_FILE}
-    STATUS_FILE: workspaces/{task-name}/status.md
-    REPORT_FILE: workspaces/{task-name}/reports/developer-{N}.md
-    QA_REPORT: workspaces/{task-name}/reports/qa-{N-1}.md
+    STATUS_FILE: tasks/{task-name}/status.md
+    REPORT_FILE: tasks/{task-name}/developer-{N}.md
+    QA_REPORT: tasks/{task-name}/qa-{N-1}.md
 
     Read your instructions from agents/developer.md, then execute your workflow using the parameters above.
     Fix the failures identified in QA_REPORT.
@@ -148,8 +148,8 @@ Task tool:
 
     ## Parameters
     TASK_FILE: {TASK_FILE}
-    DEV_REPORT: workspaces/{task-name}/reports/developer-{N}.md
-    REPORT_FILE: workspaces/{task-name}/reports/review-{N}.md
+    DEV_REPORT: tasks/{task-name}/developer-{N}.md
+    REPORT_FILE: tasks/{task-name}/review-{N}.md
 
     Read your instructions from agents/developer-review.md, then execute your workflow using the parameters above.
 ```
@@ -164,8 +164,8 @@ Task tool:
 
     ## Parameters
     TASK_FILE: {TASK_FILE}
-    DEV_REPORT: workspaces/{task-name}/reports/developer-{N}.md
-    REPORT_FILE: workspaces/{task-name}/reports/qa-{N}.md
+    DEV_REPORT: tasks/{task-name}/developer-{N}.md
+    REPORT_FILE: tasks/{task-name}/qa-{N}.md
 
     Read your instructions from agents/qa.md, then execute your workflow using the parameters above.
 ```
@@ -195,7 +195,7 @@ The Task tool blocks until the sub-agent completes. After each invocation:
 
 ## Status File Format
 
-Update `workspaces/{task-name}/status.md` after each phase transition:
+Update `tasks/{task-name}/status.md` after each phase transition:
 
 ```markdown
 # Status
@@ -207,9 +207,9 @@ Current Agent: [Planner | Developer | Review | QA | none]
 Last Updated: [ISO timestamp]
 
 ## Current Reports
-- Developer: workspaces/{task-name}/reports/developer-{N}.md
-- Review: workspaces/{task-name}/reports/review-{N}.md
-- QA: workspaces/{task-name}/reports/qa-{N}.md
+- Developer: tasks/{task-name}/developer-{N}.md
+- Review: tasks/{task-name}/review-{N}.md
+- QA: tasks/{task-name}/qa-{N}.md
 
 ## History
 - [timestamp] Iteration 1: Developer implemented feature
@@ -244,11 +244,11 @@ Last Updated: [ISO timestamp]
 
 ## Task File Organization
 
-Task files in the `tasks/` directory are organized as follows:
-- **Active tasks**: `tasks/{task-name}.md` - tasks that still need work
-- **Completed tasks**: `tasks/completed/{task-name}.md` - tasks that are done
+Each task has its own directory under `tasks/`:
+- **Active tasks**: `tasks/{task-name}/` - contains `plan.md` (spec), `status.md`, and report files
+- **Completed tasks**: `tasks/completed/{task-name}/` - moved here when done
 
-When a task reaches the `complete` phase, move the task file into the `tasks/completed/` subdirectory. This keeps active tasks visible at the top level.
+When a task reaches the `complete` phase, move the entire task directory into `tasks/completed/`. This keeps active tasks visible at the top level.
 
 ## Starting the Workflow
 
@@ -266,16 +266,16 @@ When first invoked:
      - Generate a task name from the description (kebab-case, e.g., "add logout button" → `add-logout-button`)
      - Invoke the Planner agent with the description and task name
      - Wait for the Planner to complete
-     - Set `TASK_FILE` to `tasks/{task-name}.md`
-   - If user specifies an existing task file:
-     - Verify the file exists
-     - Set `TASK_FILE` to the provided path
+     - Set `TASK_FILE` to `tasks/{task-name}/plan.md`
+   - If user specifies an existing task directory:
+     - Verify the task file exists
+     - Set `TASK_FILE` to the provided path (e.g., `tasks/{task-name}/plan.md`)
 
-4. **Parse `TASK_FILE`** to extract task name (e.g., `tasks/feature-a.md` → `feature-a`)
+4. **Parse `TASK_FILE`** to extract task name (e.g., `tasks/feature-a/plan.md` → `feature-a`)
 
-5. **Create directories** if they don't exist: `tasks/completed/`, `workspaces`, `workspaces/{task-name}/reports/`
+5. **Create directories** if they don't exist: `tasks/completed/`, `tasks/{task-name}/`
 
-6. **Initialize `workspaces/{task-name}/status.md`**
+6. **Initialize `tasks/{task-name}/status.md`**
 
 7. **Set phase to `dev` and iteration to 1**
 

@@ -8,7 +8,7 @@ When invoked, you will receive:
 - `TASK_NAME`: Name for the task file (e.g., `logout-button`)
 - `DESCRIPTION`: Initial description of what the user wants to accomplish
 
-The task file will be written to: `tasks/{TASK_NAME}.md`
+The task file will be written to: `tasks/{TASK_NAME}/plan.md`
 
 ## Your Workflow
 
@@ -47,6 +47,8 @@ Use the AskUserQuestion tool to ask these questions. Group related questions tog
 
 ## Codebase Exploration
 
+Read `agents/CODING_STANDARDS.md` when planning a task that involves writing or modifying source code.
+
 Before finalizing the task, explore the codebase to:
 - Identify the specific files that will need changes
 - Find existing patterns the developer should follow
@@ -57,7 +59,7 @@ Include this context in the task file so the developer agent has what it needs.
 
 ## Task File Template
 
-Write the task file to `tasks/{TASK_NAME}.md` using this format:
+Write the task file to `tasks/{TASK_NAME}/plan.md` using this format:
 
 ```markdown
 # {Title}

@@ -7,7 +7,7 @@ You are a QA agent responsible for verifying that features work as specified thr
 The orchestrator will provide these parameters when invoking you:
 - `TASK_FILE`: Path to the task specification
 - `DEV_REPORT`: Path to the developer's report
-- `REPORT_FILE`: Path to write your QA report (e.g., `workspaces/feature-a/reports/qa-1.md`)
+- `REPORT_FILE`: Path to write your QA report (e.g., `tasks/feature-a/qa-1.md`)
 
 ## Your Workflow
 
@@ -112,7 +112,7 @@ Write your report to `REPORT_FILE` using this format:
 
 ## Important
 
-- Actually run the feature - do not just read the code
+- Actually run the feature - do not just read the code (use your browser capability to open a tab to the application and click through the feature you are testing)
 - Document exact reproduction steps for any failures
 - Be specific about what was tested and how
 - If tests pass but the feature behaves incorrectly, that's a FAIL

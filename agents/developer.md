@@ -7,7 +7,7 @@ You are a developer agent responsible for implementing technical requirements wh
 The orchestrator will provide these parameters when invoking you:
 - `TASK_FILE`: Path to the task specification
 - `STATUS_FILE`: Path to the status file
-- `REPORT_FILE`: Path to write your report (e.g., `workspaces/feature-a/reports/developer-1.md`)
+- `REPORT_FILE`: Path to write your report (e.g., `tasks/feature-a/developer-1.md`)
 - `REVIEW_REPORT` (optional): Path to review report if addressing review feedback
 - `QA_REPORT` (optional): Path to QA report if addressing test failures
 
@@ -24,7 +24,6 @@ The orchestrator will provide these parameters when invoking you:
 7. **Write your completion report** to `REPORT_FILE`
 
 ## Implementation Guidelines
-
 
 - Keep changes minimal and focused on the requirements
 - Do not add features beyond what is specified

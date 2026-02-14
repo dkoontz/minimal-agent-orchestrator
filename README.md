@@ -4,18 +4,23 @@ A multi-agent system for Claude Code that coordinates planning, development, cod
 
 ## Quick Start
 
+### If you have a task
+
+Just tell the orchestrator which task to work on
 ```
-Read `agents/orchestrator.md`
+Read `agents/orchestrator.md` and start work on `tasks/task-name/plan.md`
 ```
 
-If you don't tell the orchestrator what task to work on it will prompt you for what to do next. You can also directly plan out tasks in advance.
-
-### Option 1: Use the Planner (Recommended)
-
-Have the planner agent help define your task:
+### If you don't have a task
 
 ```
-"Read agents/planner.md and help me plan a task.
+Read `agents/orchestrator.md` and help me plan this task: <your task description goes here>
+```
+
+or you can run the planner directly
+
+```
+Read `agents/planner.md` and help me plan this task: <your task description goes here>
 ```
 
 The planner will:
@@ -23,24 +28,7 @@ The planner will:
 2. Explore the codebase for context
 3. Draft acceptance criteria
 4. Get your approval
-5. Write the task file to `tasks/my-feature.md`
-
-### Option 2: Write Task Directly
-
-Create a task file manually in `tasks/`:
-
-```bash
-cp tasks/example.md tasks/my-feature.md
-# Edit tasks/my-feature.md with your requirements
-```
-
-### Run the Orchestrator
-
-Once you have a task file, run the orchestrator:
-
-```
-Read agents/orchestrator.md and begin work on my-feature
-```
+5. Write the task file to `tasks/my-feature/plan.md`
 
 ## Architecture
 
@@ -52,12 +40,16 @@ project/
 │   ├── developer-review.md   # Reviews code quality
 │   ├── qa.md                 # Tests functionality
 │   └── orchestrator.md       # Coordinates dev/review/qa workflow
-├── tasks/                     # Task definitions (one file per task)
-│   └── example.md
-└── workspaces/                # Auto-created per task
-    └── {task-name}/
-        ├── status.md
-        └── reports/
+└── tasks/                    # Task definitions (one directory per task)
+    ├── {task-name}/          # Auto-created per task
+    │   ├── plan.md
+    │   ├── status.md
+    │   └── reports/
+    └── completed/            # Task directories are moved here when complete
+        ├── {task1}
+        ├── {task2}
+        └── ...
+
 ```
 
 ## Full Workflow
@@ -145,7 +137,7 @@ TASK_FILE: tasks/feature-b.md"
 Reports are numbered by iteration:
 
 ```
-workspaces/my-feature/reports/
+tasks/my-feature/reports/
 ├── developer-1.md   # Initial implementation
 ├── review-1.md      # Review found issues
 ├── developer-2.md   # Fixed review issues
@@ -153,42 +145,15 @@ workspaces/my-feature/reports/
 └── qa-2.md          # QA passed
 ```
 
-## Running Individual Agents
+### Project Standards
 
-For debugging, run agents directly:
+Two files are provided for adding project-specific standards that agents will follow:
 
-```bash
-# Run planner
-claude "Read agents/planner.md and help me plan a task.
+- **`agents/CODING_STANDARDS.md`** - Coding conventions, patterns, and style rules for your project. The developer agent reads this before implementing changes, the reviewer checks code against it, and the planner references it when scoping tasks that involve code changes.
 
-Parameters:
-TASK_NAME: my-feature
-DESCRIPTION: Brief description of what you want"
+- **`agents/QA_STANDARDS.md`** - Project-specific QA instructions such as how to write integration tests, what test frameworks to use, or testing conventions. The QA agent reads this during its testing workflow.
 
-# Run developer only
-claude "Read agents/developer.md and execute your workflow.
-
-Parameters:
-TASK_FILE: tasks/my-feature.md
-STATUS_FILE: workspaces/my-feature/status.md
-REPORT_FILE: workspaces/my-feature/reports/developer-1.md"
-
-# Run review only
-claude "Read agents/developer-review.md and execute your workflow.
-
-Parameters:
-TASK_FILE: tasks/my-feature.md
-DEV_REPORT: workspaces/my-feature/reports/developer-1.md
-REPORT_FILE: workspaces/my-feature/reports/review-1.md"
-
-# Run QA only
-claude "Read agents/qa.md and execute your workflow.
-
-Parameters:
-TASK_FILE: tasks/my-feature.md
-DEV_REPORT: workspaces/my-feature/reports/developer-1.md
-REPORT_FILE: workspaces/my-feature/reports/qa-1.md"
-```
+Both files ship empty. Add your project's conventions and the agents will incorporate them into their workflows automatically.
 
 ## Customization
 
