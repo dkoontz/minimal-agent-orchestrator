@@ -107,10 +107,10 @@ Where `[planning]`, `[plan-review]`, and `[approval]` are only invoked if the us
 - Write final status update
 - Move the task directory from `tasks/{task-name}/` to `tasks/completed/{task-name}/`
 - Report success to the user
-- **Ask the user** (using AskUserQuestion) whether to merge the worktree branch to `main`
-  - Options: "Merge to main and clean up" or "Keep the branch for now"
+- **Ask the user** (using AskUserQuestion) whether to merge the worktree branch back to `{base-branch}`
+  - Options: "Merge to {base-branch} and clean up" or "Keep the branch for now"
   - If user approves merge:
-    1. Switch to main: `git checkout main`
+    1. Switch to the base branch: `git checkout {base-branch}`
     2. Fast-forward merge: `git merge --ff-only {task-name}`
     3. Delete the worktree: `git worktree remove ../$(basename $PWD).worktrees/{task-name}`
     4. Delete the branch: `git branch -d {task-name}`
@@ -311,6 +311,7 @@ Update `tasks/{task-name}/status.md` after each phase transition:
 # Status
 
 Task: {TASK_FILE}
+Base Branch: {base-branch}
 Branch: {task-name}
 Worktree: ../{project-name}.worktrees/{task-name}
 Phase: [ask | planning | plan-review | approval | dev | review | qa | complete]
@@ -395,7 +396,8 @@ When first invoked:
 5. **Create directories** if they don't exist: `tasks/completed/`, `tasks/{task-name}/`
 
 6. **Create git worktree** for the task:
-   - Create a new branch from `main`: `git branch {task-name} main`
+   - Record the current branch as the base branch: `git rev-parse --abbrev-ref HEAD` → `{base-branch}`
+   - Create a new branch from the current branch: `git branch {task-name} HEAD`
    - Create the worktree: `git worktree add ../$(basename $PWD).worktrees/{task-name} {task-name}`
    - The `../{project-name}.worktrees/` directory must already exist
 
