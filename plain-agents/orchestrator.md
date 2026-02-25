@@ -21,6 +21,7 @@ Report files (where `N` is the current iteration number):
 - Developer report: `tasks/{task-name}/developer-{N}.md`
 - Review report: `tasks/{task-name}/review-{N}.md`
 - QA report: `tasks/{task-name}/qa-{N}.md`
+- Plan review report: `tasks/{task-name}/plan-review-{N}.md`
 
 ## Your Workflow
 
@@ -35,14 +36,14 @@ Report files (where `N` is the current iteration number):
 ## Workflow State Machine
 
 ```
-ASK → [planning] → [approval] → dev → review → qa → COMPLETE
-                       ↑          ↑      |       |
-                       |          |      v       |
-                    (revise)      +------+-------+
-                                  (on failure, return to dev, then back through review)
+ASK → [planning] → [plan-review] → [approval] → dev → review → qa → COMPLETE
+                       ↑     ↑                    ↑      |       |
+                       |     |                    |      v       |
+                    (revise)(on changes requested) +------+-------+
+                                                   (on failure, return to dev, then back through review)
 ```
 
-Where `[planning]` and `[approval]` are only invoked if the user describes a new task. The orchestrator **must wait for explicit user approval** of the plan before proceeding to `dev`.
+Where `[planning]`, `[plan-review]`, and `[approval]` are only invoked if the user describes a new task. The orchestrator **must wait for explicit user approval** of the plan before proceeding to `dev`.
 
 **Important:** All paths back to `dev` must proceed through `review` before returning to `qa`. The reviewer must verify fixes before QA re-tests.
 
@@ -60,11 +61,27 @@ Where `[planning]` and `[approval]` are only invoked if the user describes a new
 - Wait for Planner to complete
 - The Planner will create the task file at `tasks/{task-name}/plan.md`
 - Set `TASK_FILE` to the created file path
+- Transition to `plan-review` phase
+
+### Phase: `plan-review`
+- Invoke the Technical Plan Reviewer agent using the Task tool
+- Pass the plan file path and a plan-review report path (e.g., `tasks/{task-name}/plan-review-1.md`)
+- Wait for the reviewer to complete
+- Read the plan-review report
+- If CHANGES REQUESTED:
+  - Increment plan review iteration
+  - If plan review iteration reaches 3, skip further automated review and go directly to user approval
+  - Otherwise, invoke the Planner again, passing the plan-review report as feedback
+  - After the Planner revises the plan, loop back to `plan-review`
+- If APPROVED → transition to `approval` phase
+
+### Phase: `approval`
 - **Present the plan to the user for approval** (use AskUserQuestion):
   - Show the user the plan file path and a brief summary of what the Planner produced
+  - Also mention whether the technical plan reviewer approved it or had suggestions
   - Options: "Approve and start development" or "Revise the plan" or "Cancel"
   - If approved → transition to `dev` phase
-  - If revise → ask the user what changes they want, invoke the Planner again with the feedback
+  - If revise → ask the user what changes they want, invoke the Planner again with the feedback, then loop back through `plan-review`
   - If cancel → stop the workflow and report that the task was cancelled
 - **Do NOT proceed to `dev` until the user explicitly approves the plan**
 
@@ -209,7 +226,7 @@ Task tool:
     Read your instructions from agents/qa.md, then execute your workflow using the parameters above.
 ```
 
-### Planner Agent
+### Planner Agent (initial)
 ```
 Task tool:
   subagent_type: "general-purpose"
@@ -222,6 +239,60 @@ Task tool:
     DESCRIPTION: {user's description}
 
     Read your instructions from agents/planner.md, then execute your workflow using the parameters above.
+```
+
+### Planner Agent (revision after plan-review feedback)
+```
+Task tool:
+  subagent_type: "general-purpose"
+  description: "Planner revises task specification"
+  prompt: |
+    You are the Planner agent.
+
+    ## Parameters
+    TASK_NAME: {task-name}
+    DESCRIPTION: {user's description}
+    PLAN_REVIEW_REPORT: tasks/{task-name}/plan-review-{N}.md
+
+    The technical plan reviewer has requested changes to the plan. Read the
+    PLAN_REVIEW_REPORT and revise the plan at tasks/{task-name}/plan.md to
+    address all BLOCKING issues identified.
+
+    Read your instructions from agents/planner.md, then execute your workflow using the parameters above.
+```
+
+### Planner Agent (revision after user feedback)
+```
+Task tool:
+  subagent_type: "general-purpose"
+  description: "Planner revises task specification per user feedback"
+  prompt: |
+    You are the Planner agent.
+
+    ## Parameters
+    TASK_NAME: {task-name}
+    DESCRIPTION: {user's description}
+    USER_FEEDBACK: {user's requested changes}
+
+    The user has requested changes to the plan. Revise the plan at
+    tasks/{task-name}/plan.md to address their feedback.
+
+    Read your instructions from agents/planner.md, then execute your workflow using the parameters above.
+```
+
+### Technical Plan Reviewer Agent
+```
+Task tool:
+  subagent_type: "general-purpose"
+  description: "Review task specification"
+  prompt: |
+    You are the Technical Plan Reviewer agent.
+
+    ## Parameters
+    TASK_FILE: tasks/{task-name}/plan.md
+    REPORT_FILE: tasks/{task-name}/plan-review-{N}.md
+
+    Read your instructions from agents/technical-plan-reviewer.md, then execute your workflow using the parameters above.
 ```
 
 ### Waiting for Sub-Agents
@@ -242,12 +313,14 @@ Update `tasks/{task-name}/status.md` after each phase transition:
 Task: {TASK_FILE}
 Branch: {task-name}
 Worktree: ../{project-name}.worktrees/{task-name}
-Phase: [ask | planning | dev | review | qa | complete]
+Phase: [ask | planning | plan-review | approval | dev | review | qa | complete]
 Iteration: [number - increment each time we return to dev]
-Current Agent: [Planner | Developer | Review | QA | none]
+Plan Review Iteration: [number - increment each time we return to planning from plan-review]
+Current Agent: [Planner | PlanReviewer | Developer | Review | QA | none]
 Last Updated: [ISO timestamp]
 
 ## Current Reports
+- Plan Review: tasks/{task-name}/plan-review-{N}.md
 - Developer: tasks/{task-name}/developer-{N}.md
 - Review: tasks/{task-name}/review-{N}.md
 - QA: tasks/{task-name}/qa-{N}.md
@@ -263,7 +336,9 @@ Last Updated: [ISO timestamp]
 
 ## Decision Rules
 
-1. **Max Iterations**: If iteration count reaches 5, stop and report that the task could not be completed. List the recurring issues.
+1. **Max Dev Iterations**: If dev iteration count reaches 5, stop and report that the task could not be completed. List the recurring issues.
+
+1a. **Max Plan Review Iterations**: If plan review iteration count reaches 3 without APPROVED, skip further automated review and proceed directly to user approval. Include a note in the approval prompt that the plan reviewer was unable to reach APPROVED status and list the outstanding issues.
 
 2. **Build/Test Failures**: Always return to dev phase. Never proceed to review if build or tests fail.
 
@@ -309,7 +384,8 @@ When first invoked:
      - Invoke the Planner agent with the description and task name
      - Wait for the Planner to complete
      - Set `TASK_FILE` to `tasks/{task-name}/plan.md`
-     - **Stop and ask the user to approve the plan before continuing** (see Phase: `planning` above). Do NOT proceed to development until the user explicitly approves.
+     - Invoke the Technical Plan Reviewer; iterate with the Planner if changes are requested (see Phase: `plan-review` above)
+     - **Stop and ask the user to approve the plan before continuing** (see Phase: `approval` above). Do NOT proceed to development until the user explicitly approves.
    - If user specifies an existing task directory:
      - Verify the task file exists
      - Set `TASK_FILE` to the provided path (e.g., `tasks/{task-name}/plan.md`)

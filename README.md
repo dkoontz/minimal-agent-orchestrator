@@ -2,74 +2,163 @@
 
 A multi-agent system for Claude Code that coordinates planning, development, code review, and QA through specialized agents.
 
-## Quick Start
+Two versions are provided:
 
-### If you have a task
+|               | [Plain Agents](#plain-agents)                                        | [Claude Sub-Agents](#claude-sub-agents)                                       |
+| ------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| How it works  | Agent instructions are loaded as text snippets into Claude's context | Agents are registered as Claude Code sub-agents with defined tools and models |
+| Orchestration | Read `agents/orchestrator.md` as a snippet                           | `/orchestrate-plan` and `/orchestrate-task` slash commands                    |
+| Extras        | —                                                                    | Typed tool access per agent                                                   |
+| Installation  | Copy `plain-agents/` as `agents/` to your project                    | Copy files into `.claude/agents/` and `.claude/commands/`                     |
 
-Just tell the orchestrator which task to work on
+---
+
+## Full Workflow
+
+The **Orchestrator** manages the entire workflow. It invokes each agent in sequence and decides what to do based on their reports.
+
+**Planning workflow** (creates a task file):
+```
+Orchestrator → Planner → [Plan Reviewer ↔ Planner] → [User Approval]
+```
+
+**Development workflow** (executes a task file):
+```
+Orchestrator → Developer → Review → QA → Complete
+                   ↑          |       |
+                   └──────────┴───────┘
+                         (on failure)
+```
+
+1. **Planner** — Interacts with the user to define requirements and write the task file
+2. **Technical Plan Reviewer** — Validates the plan; the orchestrator loops it back to the planner if changes are needed
+3. **Developer** — Implements the requirements, runs build and tests
+4. **Reviewer** — Checks code quality and identifies issues
+5. **QA** — Verifies functionality through testing
+
+---
+
+## Plain Agents
+
+Agents work as text snippets — you paste or reference the agent file in your prompt and Claude follows the instructions.
+
+### Installation
+
+Copy `plain-agents/` into your project as `agents/`:
+
+### Usage
+
+If you have a task file:
+
 ```
 Read `agents/orchestrator.md` and start work on `tasks/task-name/plan.md`
 ```
 
-### If you don't have a task
+If you don't have a task yet:
 
 ```
-Read `agents/orchestrator.md` and help me plan this task: <your task description goes here>
+Read `agents/orchestrator.md` and help me plan this task: <your task description>
 ```
 
-or you can run the planner directly
+### Project structure
 
 ```
-Read `agents/planner.md` and help me plan this task: <your task description goes here>
-```
-
-The planner will:
-1. Ask clarifying questions about requirements
-2. Explore the codebase for context
-3. Draft acceptance criteria
-4. Get your approval
-5. Write the task file to `tasks/my-feature/plan.md`
-
-## Architecture
-
-```
-project/
+your-project/
 ├── agents/
-│   ├── planner.md            # Gathers requirements, writes task files
-│   ├── developer.md          # Implements code changes
-│   ├── developer-review.md   # Reviews code quality
-│   ├── qa.md                 # Tests functionality
-│   └── orchestrator.md       # Coordinates dev/review/qa workflow
-└── tasks/                    # Task definitions (one directory per task)
-    ├── {task-name}/          # Auto-created per task
+│   ├── orchestrator.md              # Coordinates the workflow
+│   ├── planner.md                   # Gathers requirements, writes task files
+│   ├── developer.md                 # Implements code changes
+│   ├── developer-review.md          # Reviews code quality
+│   ├── qa.md                        # Tests functionality
+│   ├── technical-plan-reviewer.md   # Reviews plans before development
+│   ├── CODING_STANDARDS.md          # Your project's coding conventions (fill this in)
+│   └── QA_STANDARDS.md              # Your project's QA conventions (fill this in)
+└── tasks/
+    ├── {task-name}/
     │   ├── plan.md
     │   ├── status.md
-    │   └── reports/
-    └── completed/            # Task directories are moved here when complete
-        ├── {task1}
-        ├── {task2}
-        └── ...
-
+    │   └── *.md              # iteration reports
+    └── completed/
 ```
 
-## Full Workflow
+### Customization
+
+Modify the agent files in `agents/` to adjust review criteria, testing approach, report formats, or workflow rules.
+
+---
+
+## Claude Sub-Agents
+
+Agents are registered as Claude Code sub-agents — they have defined tool access, a specified model, and are invoked natively by the Task tool rather than loaded as text snippets. The workflow is started with the `/orchestrate` slash command.
+
+### Installation
+
+Copy the agent and command files into your project's `.claude/` directory:
 
 ```
-Planner → [writes task file] → Orchestrator → Developer → Review → QA → Complete
-                                                  ↑          |       |
-                                                  └──────────┴───────┘
-                                                       (on failure)
+path/to/your-project/.claude/agents/
+path/to/your-project/.claude/commands/
 ```
 
-1. **Planner** - Interacts with user to define requirements and write task file
-2. **Orchestrator** - Coordinates the development workflow
-3. **Developer** - Implements the requirements, runs build and tests
-4. **Review** - Checks code quality and identifies issues
-5. **QA** - Verifies functionality through testing
+Add the CODING/QA standards templates to your project root (agents read these at runtime):
+
+### Usage
+
+Plan a new task (produces a task file):
+
+```
+/orchestrate-plan add a logout button
+```
+
+Or run without arguments to be prompted:
+
+```
+/orchestrate-plan
+```
+
+Once you have a task file, start development:
+
+```
+/orchestrate-task tasks/add-logout-button/plan.md
+```
+
+Or run without arguments to be prompted for the task file path:
+
+```
+/orchestrate-task
+```
+
+### Project structure
+
+```
+your-project/
+├── .claude/
+│   ├── agents/
+│   │   ├── planner.md                  # Gathers requirements, writes task files
+│   │   ├── developer.md                # Implements code changes
+│   │   ├── developer-review.md         # Reviews code quality
+│   │   ├── qa.md                       # Tests functionality
+│   │   └── technical-plan-reviewer.md  # Reviews plans before development
+│   └── commands/
+│       ├── orchestrate-plan.md         # /orchestrate-plan slash command
+│       └── orchestrate-task.md         # /orchestrate-task slash command
+├── CODING_STANDARDS.md       # Your project's coding conventions (fill this in)
+├── QA_STANDARDS.md           # Your project's QA conventions (fill this in)
+└── tasks/
+    ├── {task-name}/
+    │   ├── plan.md
+    │   ├── status.md
+    │   └── *.md              # iteration reports
+    └── completed/
+```
+
+### Customization
+
+Modify the agent files in `.claude/agents/` and the command in `.claude/commands/` to adjust behavior. The YAML frontmatter in each agent file controls the model and available tools.
+
+---
 
 ## Task File Format
-
-Task files follow a standard template:
 
 ```markdown
 # Add user logout button
@@ -113,31 +202,16 @@ Add a logout button to the application header that clears the user session.
 - Session is stored in localStorage under 'auth_token' key
 ```
 
-## Running Multiple Tasks
-
-Start separate Claude Code sessions:
-
-```bash
-# Terminal 1: Plan a task
-claude "Read agents/planner.md and help me plan a task.
-
-Parameters:
-TASK_NAME: feature-a
-DESCRIPTION: Add dark mode support"
-
-# Terminal 2: Execute a different task
-claude "Read agents/orchestrator.md and execute the workflow.
-
-Parameters:
-TASK_FILE: tasks/feature-b.md"
-```
+---
 
 ## Agent Reports
 
-Reports are numbered by iteration:
+Reports are numbered by iteration and written to the task directory:
 
 ```
-tasks/my-feature/reports/
+tasks/my-feature/
+├── plan.md
+├── status.md
 ├── developer-1.md   # Initial implementation
 ├── review-1.md      # Review found issues
 ├── developer-2.md   # Fixed review issues
@@ -145,21 +219,18 @@ tasks/my-feature/reports/
 └── qa-2.md          # QA passed
 ```
 
-### Project Standards
+---
 
-Two files are provided for adding project-specific standards that agents will follow:
+## Project Standards
 
-- **`agents/CODING_STANDARDS.md`** - Coding conventions, patterns, and style rules for your project. The developer agent reads this before implementing changes, the reviewer checks code against it, and the planner references it when scoping tasks that involve code changes.
+Fill in these files with your project's conventions — agents read them automatically:
 
-- **`agents/QA_STANDARDS.md`** - Project-specific QA instructions such as how to write integration tests, what test frameworks to use, or testing conventions. The QA agent reads this during its testing workflow.
+- **`CODING_STANDARDS.md`** — Coding conventions, patterns, and style rules. The developer reads this before implementing, the reviewer checks code against it, and the planner references it when scoping tasks.
+  - Plain agents: lives at `agents/CODING_STANDARDS.md`
+  - Claude sub-agents: lives at the project root
 
-Both files ship empty. Add your project's conventions and the agents will incorporate them into their workflows automatically.
+- **`QA_STANDARDS.md`** — Project-specific QA instructions: test framework, how to run tests, integration test conventions. The QA agent reads this during its workflow.
+  - Plain agents: lives at `agents/QA_STANDARDS.md`
+  - Claude sub-agents: lives at the project root
 
-## Customization
-
-Modify the agent prompts in `agents/` to adjust:
-- Planner questions and task template
-- Review criteria
-- Testing approach
-- Report formats
-- Workflow rules
+Both files ship empty. The more detail you add, the better agents will align with your project's expectations.
