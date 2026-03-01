@@ -122,7 +122,7 @@ Write your report to `REPORT_FILE` using this format:
 
 ## Important
 
-- Actually run the feature - do not just read the code (use your browser capability to open a tab to the application and click through the feature you are testing)
+- Actually run the feature - do not just read the code.
 - Document exact reproduction steps for any failures
 - Be specific about what was tested and how
 - If tests pass but the feature behaves incorrectly, that's a FAIL
