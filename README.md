@@ -64,15 +64,15 @@ Read `agents/orchestrator.md` and help me plan this task: <your task description
 
 ```
 your-project/
+├── CODING_STANDARDS.md              # Your project's coding conventions (fill this in)
+├── QA_STANDARDS.md                  # Your project's QA conventions (fill this in)
 ├── agents/
 │   ├── orchestrator.md              # Coordinates the workflow
 │   ├── planner.md                   # Gathers requirements, writes task files
 │   ├── developer.md                 # Implements code changes
 │   ├── developer-review.md          # Reviews code quality
 │   ├── qa.md                        # Tests functionality
-│   ├── technical-plan-reviewer.md   # Reviews plans before development
-│   ├── CODING_STANDARDS.md          # Your project's coding conventions (fill this in)
-│   └── QA_STANDARDS.md              # Your project's QA conventions (fill this in)
+│   └── technical-plan-reviewer.md   # Reviews plans before development
 └── tasks/
     ├── {task-name}/
     │   ├── plan.md
@@ -89,18 +89,20 @@ Modify the agent files in `agents/` to adjust review criteria, testing approach,
 
 ## Claude Sub-Agents
 
-Agents are registered as Claude Code sub-agents — they have defined tool access, a specified model, and are invoked natively by the Task tool rather than loaded as text snippets. The workflow is started with the `/orchestrate` slash command.
+Agents are registered as Claude Code sub-agents — they have defined tool access, a specified model, and are invoked natively by the Task tool rather than loaded as text snippets. The workflow is started with the `/orchestrate-plan` or `/orchestrate-task` slash commands.
 
 ### Installation
 
-Copy the agent and command files into your project's `.claude/` directory:
+Copy the agent and command directories into your project's `.claude/` directory:
 
 ```
 path/to/your-project/.claude/agents/
 path/to/your-project/.claude/commands/
 ```
 
-Add the CODING/QA standards templates to your project root (agents read these at runtime):
+Add the CODING/QA standards templates to your project root (agents read these at runtime).
+
+Alternatively you can install these files in your global `~/.claude` directory to make them available for all projects.
 
 ### Usage
 
@@ -226,11 +228,11 @@ tasks/my-feature/
 Fill in these files with your project's conventions — agents read them automatically:
 
 - **`CODING_STANDARDS.md`** — Coding conventions, patterns, and style rules. The developer reads this before implementing, the reviewer checks code against it, and the planner references it when scoping tasks.
-  - Plain agents: lives at `agents/CODING_STANDARDS.md`
+  - Plain agents: lives at `CODING_STANDARDS.md`
   - Claude sub-agents: lives at the project root
 
 - **`QA_STANDARDS.md`** — Project-specific QA instructions: test framework, how to run tests, integration test conventions. The QA agent reads this during its workflow.
-  - Plain agents: lives at `agents/QA_STANDARDS.md`
+  - Plain agents: lives at `QA_STANDARDS.md`
   - Claude sub-agents: lives at the project root
 
 Both files ship empty. The more detail you add, the better agents will align with your project's expectations.

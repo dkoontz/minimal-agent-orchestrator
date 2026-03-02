@@ -223,7 +223,7 @@ Task tool:
     Before starting, navigate to the worktree:
         cd $(git rev-parse --show-toplevel)/../$(basename $(git rev-parse --show-toplevel)).worktrees/{task-name}
 
-    Read your instructions from agents/qa.md, then execute your workflow using the parameters above.
+    Read your instructions from QA.md, then execute your workflow using the parameters above.
 ```
 
 ### Planner Agent (initial)
