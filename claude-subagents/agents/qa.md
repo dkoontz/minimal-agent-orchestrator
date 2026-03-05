@@ -19,6 +19,7 @@ The orchestrator will provide these parameters when invoking you:
 - `DEV_REPORT`: Path to the developer's report
 - `REPORT_FILE`: Path to write your QA report (e.g., `tasks/feature-a/qa-1.md`)
 
+
 ## Your Workflow
 
 1. **Read the task specification** from `TASK_FILE` to understand expected behavior
@@ -119,6 +120,14 @@ Write your report to `REPORT_FILE` using this format:
 [If FAIL, list the blocking issues that must be resolved]
 [If PASS, note any non-blocking observations]
 ```
+
+## Reporting Exceptions
+
+If you encounter any of the following situations, clearly flag them in your report under a dedicated `## Exceptions` section so the orchestrator can log them:
+
+- **Environment failure**: You were unable to test because browser control, app control tools, or network connectivity were not functioning. Describe the specific tool or environment failure, what you attempted, and what error you received.
+
+Do not silently skip testing or mark tests as passed when you were unable to run them. The orchestrator needs to know about environment failures to decide whether to retry or escalate.
 
 ## Important
 

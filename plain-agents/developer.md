@@ -69,6 +69,15 @@ Write your report to `REPORT_FILE` using this format:
 [Current iteration number from status file]
 ```
 
+## Reporting Exceptions
+
+If you encounter any of the following situations, clearly flag them in your report under a dedicated `## Exceptions` section so the orchestrator can log them:
+
+- **Unimplementable requirement**: A requirement cannot be implemented as written because dependencies do not exist, require changes outside the task scope, or require user input to resolve. Describe what is missing and why you cannot proceed.
+- **Untestable intermediate work**: QA has flagged missing tests, but tests cannot be written because this is an intermediate step and the complete functionality does not yet exist. Explain which tests are missing and why they cannot be written now.
+
+Do not silently skip or work around these issues — the orchestrator needs to know about them to decide the correct course of action.
+
 ## Important
 
 - Do NOT proceed if build fails - fix the build errors first

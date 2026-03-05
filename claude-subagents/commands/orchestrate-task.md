@@ -15,6 +15,7 @@ If `$ARGUMENTS` is non-empty, treat it as `TASK_FILE`.
 - Worktree: `../{project-name}.worktrees/{task-name}` (branch: `{task-name}`)
 - Task directory: `tasks/{task-name}/`
 - Status file: `tasks/{task-name}/status.md`
+- Exceptions file: `tasks/{task-name}/EXCEPTIONS.md`
 
 Report files (where `N` is the current iteration number):
 - Developer report: `tasks/{task-name}/developer-{N}.md`
@@ -76,7 +77,7 @@ dev → review → qa → COMPLETE
 
 ### Phase: `complete`
 - Write final status update
-- Move the task directory from `tasks/{task-name}/` to `tasks/completed/{task-name}/`
+- Move the task directory from `tasks/{task-name}/` to `tasks/completed/{task-name}/`, make sure `tasks/{task-name}` no longer exists after the move.
 - Report success to the user
 - **Ask the user** (using AskUserQuestion) whether to merge the worktree branch back to `{base-branch}`
   - Options: "Merge to {base-branch} and clean up" or "Keep the branch for now"
@@ -85,7 +86,9 @@ dev → review → qa → COMPLETE
     2. Fast-forward merge: `git merge --ff-only {task-name}`
     3. Delete the worktree: `git worktree remove ../$(basename $PWD).worktrees/{task-name}`
     4. Delete the branch: `git branch -d {task-name}`
-    5. Report that the merge is complete
+    5. Ammend the task files from `tasks/completed{task-name}` to the commit, do not create a new commit.
+    6. Report that the merge is complete
+
   - If user declines:
     - Report that the branch `{task-name}` and worktree are preserved for manual handling
 
@@ -103,10 +106,15 @@ Task tool:
     TASK_FILE: {TASK_FILE}
     STATUS_FILE: tasks/{task-name}/status.md
     REPORT_FILE: tasks/{task-name}/developer-{N}.md
+
     WORKTREE: ../$(basename $PWD).worktrees/{task-name}
 
     Before starting, navigate to the worktree:
         cd $(git rev-parse --show-toplevel)/../$(basename $(git rev-parse --show-toplevel)).worktrees/{task-name}
+
+    If you encounter a requirement that cannot be implemented as written (missing
+    dependencies, requires changes outside task scope, or needs user input), note
+    this clearly in your report so the orchestrator can log it as an exception.
 ```
 
 ### Developer Agent (subsequent iterations - after review feedback)
@@ -120,12 +128,14 @@ Task tool:
     STATUS_FILE: tasks/{task-name}/status.md
     REPORT_FILE: tasks/{task-name}/developer-{N}.md
     REVIEW_REPORT: tasks/{task-name}/review-{N-1}.md
+
     WORKTREE: ../$(basename $PWD).worktrees/{task-name}
 
     Before starting, navigate to the worktree:
         cd $(git rev-parse --show-toplevel)/../$(basename $(git rev-parse --show-toplevel)).worktrees/{task-name}
 
-    Address the issues identified in REVIEW_REPORT.
+    Address the issues identified in REVIEW_REPORT. If you encounter a requirement
+    that cannot be implemented as written, note this clearly in your report.
 ```
 
 ### Developer Agent (subsequent iterations - after QA failure)
@@ -139,12 +149,15 @@ Task tool:
     STATUS_FILE: tasks/{task-name}/status.md
     REPORT_FILE: tasks/{task-name}/developer-{N}.md
     QA_REPORT: tasks/{task-name}/qa-{N-1}.md
+
     WORKTREE: ../$(basename $PWD).worktrees/{task-name}
 
     Before starting, navigate to the worktree:
         cd $(git rev-parse --show-toplevel)/../$(basename $(git rev-parse --show-toplevel)).worktrees/{task-name}
 
-    Fix the failures identified in QA_REPORT.
+    Fix the failures identified in QA_REPORT. If a test cannot be written because
+    this is intermediate work and the complete functionality does not yet exist,
+    explain this clearly in your report so the orchestrator can log it as an exception.
 ```
 
 ### Developer Review Agent
@@ -157,6 +170,7 @@ Task tool:
     TASK_FILE: {TASK_FILE}
     DEV_REPORT: tasks/{task-name}/developer-{N}.md
     REPORT_FILE: tasks/{task-name}/review-{N}.md
+
     WORKTREE: ../$(basename $PWD).worktrees/{task-name}
 
     Before starting, navigate to the worktree:
@@ -173,10 +187,15 @@ Task tool:
     TASK_FILE: {TASK_FILE}
     DEV_REPORT: tasks/{task-name}/developer-{N}.md
     REPORT_FILE: tasks/{task-name}/qa-{N}.md
+
     WORKTREE: ../$(basename $PWD).worktrees/{task-name}
 
     Before starting, navigate to the worktree:
         cd $(git rev-parse --show-toplevel)/../$(basename $(git rev-parse --show-toplevel)).worktrees/{task-name}
+
+    If you are unable to test due to environment issues (browser control, app
+    control tools, or network connectivity not functioning), report the specific
+    failure clearly so the orchestrator can log it as an exception.
 ```
 
 ## Status File Format
@@ -209,6 +228,37 @@ Last Updated: [ISO timestamp]
 - [timestamp] Iteration 2: QA passed
 ```
 
+## Exception Logging
+
+When a sub-agent reports an unexpected situation that prevents normal workflow progression, log it in `tasks/{task-name}/EXCEPTIONS.md`. Create this file on the first exception. Each entry must record what happened and the course of action taken.
+
+### When to log an exception
+
+- **Unimplementable requirement**: The developer reports that a task requirement cannot be implemented as written because dependencies do not exist, require changes outside the task scope, or require user input to resolve. Log the requirement, what is missing, and whether the orchestrator is escalating to the user or scoping down.
+- **Untestable intermediate work**: The QA agent identifies missing tests but the developer reports that tests cannot be written because this is an intermediate step and the complete functionality does not yet exist. Log which tests are missing, why they cannot be written now, and that the exception was granted. This is the one case where rule 5 (Missing Test Coverage) may be overridden — the exception must be logged here instead of cycling the agents.
+- **QA environment failure**: The QA agent was unable to test because browser control, app control tools, or network connectivity were not functioning. Log the tool/environment failure, and whether the orchestrator is retrying, skipping QA, or escalating to the user.
+
+### Exception file format
+
+```markdown
+# Exceptions
+
+## [ISO timestamp] — {short description}
+- **Phase**: {dev | review | qa}
+- **Iteration**: {N}
+- **Agent**: {Developer | Review | QA}
+- **Situation**: {description of what the agent encountered}
+- **Action taken**: {what the orchestrator decided — e.g., escalated to user, granted exception, retried, skipped phase}
+```
+
+Append new entries to the end of the file. Do not remove previous entries.
+
+### Handling exceptions
+
+- For **unimplementable requirements**, escalate to the user using AskUserQuestion. Do not attempt to work around missing dependencies or guess at design decisions. Pause the workflow until the user responds.
+- For **untestable intermediate work**, log the exception and allow the workflow to proceed past QA without failing on the missing tests. The developer and QA reports should both note the gap. This overrides decision rule 5 for the specific untestable items only — all other testable items must still have coverage.
+- For **QA environment failures**, retry QA once. If the second attempt also fails due to environment issues, escalate to the user. Do not mark QA as passed — the task remains in the `qa` phase until the user decides how to proceed.
+
 ## Decision Rules
 
 1. **Max Dev Iterations**: If dev iteration count reaches 5, stop and report that the task could not be completed. List the recurring issues.
@@ -219,7 +269,9 @@ Last Updated: [ISO timestamp]
 
 4. **QA Failures**: Any BLOCKER severity issue means FAIL.
 
-5. **Review Required After Dev**: Developer work must always be reviewed before QA testing. Never send dev fixes directly to QA — the flow is always dev → review → qa.
+5. **Missing Test Coverage**: Never override the QA agent when it identifies missing tests. If QA reports insufficient test coverage, treat it as a failure and send it back to dev. Exceptions: (a) the task plan explicitly states that no tests are required for the specific item, or (b) the developer demonstrates this is untestable intermediate work — in which case you MUST log it in `EXCEPTIONS.md` before allowing the workflow to proceed (see Exception Logging above).
+
+6. **Review Required After Dev**: Developer work must always be reviewed before QA testing. Never send dev fixes directly to QA — the flow is always dev → review → qa.
 
 ## Task File Organization
 
