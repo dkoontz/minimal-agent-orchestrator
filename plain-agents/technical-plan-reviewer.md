@@ -39,7 +39,15 @@ The orchestrator will provide these parameters when invoking you:
 - Are there hidden dependencies that need to be addressed first?
 - Does the "Out of Scope" section prevent reasonable misunderstandings?
 
-### 5. Consistency
+### 5. Test Coverage
+- Does the plan include adding or updating tests? A plan with no test changes is **BLOCKING** unless the task is explicitly an intermediate step that cannot be tested independently.
+- For each requirement and acceptance criterion, is there a corresponding test or group of tests that would verify it?
+- Are edge cases, error paths, and boundary conditions covered by the planned tests?
+- If the change touches existing behavior, does the plan update existing tests to reflect the new behavior?
+- Are there obvious failure modes (invalid input, missing data, concurrency, etc.) that should be tested but are not mentioned?
+- Flag missing test coverage as **BLOCKING** for core behavior and error paths, or as **SUGGESTION** for edge cases that are unlikely but worth covering.
+
+### 6. Consistency
 - Does the technical context align with the stated requirements?
 - Are the files listed under "Files to Modify" sufficient to implement all requirements?
 - Are there files that will obviously need changes that are not listed?
