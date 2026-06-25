@@ -4,7 +4,7 @@ import { join } from "node:path"
 
 const VALID_TYPES = [
   "plan", "act", "investigator", "planner", "developer",
-  "reviewer", "qa", "debugger", "reflector"
+  "reviewer", "qa", "debugger", "reflector", "critic", "synthesizer"
 ]
 
 const TEMPLATES: Record<string, string> = {
@@ -240,6 +240,35 @@ Each attempted step, newest last.
 - {any Decision in the plan that a reframing would invalidate, or "none"}
 - {any Known Fact tagged [inferred] that should be measured before further Do cycles, or "none"}`,
 
+  critic: `**Plan under critique**: {planner spec title, or "inline cycle-{N}-plan"}
+**Overall assessment**: SOUND | CONCERNS RAISED | UNSUPPORTED APPROACH
+**Findings**:
+### Finding 1: {short title}
+- **Category**: {Unsupported strategy | Unwarranted assumption | Premature solution}
+- **Severity**: {HIGH | MEDIUM | LOW}
+- **What the plan assumes**: {the specific claim or approach the plan depends on}
+- **Why it is not justified**: {what evidence is missing — the absent Known Fact, the [inferred] fact treated as settled, or the unresolved Open Question}
+- **Evidence that would justify it**: {the investigation or measurement needed, or "already established — finding withdrawn"}
+{repeat per finding; omit the Findings section entirely if SOUND}
+**Verified against code**:
+- \`{path}:{line}\` — {load-bearing claim checked, and whether it held or was contradicted}
+- {or "none"}`,
+
+  synthesizer: `**Decision**: ACCEPT PLAN | REVISE PLAN | INVESTIGATE FIRST
+**Plan under review**: {planner spec title}
+**Critique**: {critic overall assessment, one line}
+**Reasoning**:
+{1–2 paragraphs weighing the plan against the critique in light of the goal and accumulated history — cite Known Facts, Decisions, prior cycle learnings}
+**Adopted critic findings**:
+- {finding} — {one-line reason}
+- {or "none"}
+**Overridden critic findings**:
+- {finding} — {one-line reason; do not silently drop any}
+- {or "none"}
+**Required changes**:
+- {specific, actionable change to the plan if REVISE or INVESTIGATE; or "none — plan accepted as-is"}
+**Next**: {proceed to developer | re-plan next cycle | investigator cycle}`,
+
   act: `**Plan updates**:
 - {what moved where in the plan — e.g. "Q: 'is Session shared?' → Known Facts"}
 **Gain**: {one line — what is now known (measured or inferred) that was not known before this cycle, even if the code change was reverted}
@@ -336,12 +365,12 @@ export default tool({
       .describe("The pdca operation to perform"),
     goal: tool.schema.string().describe("Kebab-case goal name (e.g. 'fix-login-bug')"),
     cycle: tool.schema.number().optional().describe("Cycle number for cycle-create"),
-    type: tool.schema.string().optional().describe("Entry type for [entry-write, last-entry]: plan, act, investigator, planner, developer, reviewer, qa, debugger, reflector"),
+    type: tool.schema.string().optional().describe("Entry type for [entry-write, last-entry]: plan, act, investigator, planner, developer, reviewer, qa, debugger, reflector, critic, synthesizer"),
     id: tool.schema.string().optional().describe("Entry ID for [entry-read, entry-check] (e.g. 'cycle-2-investigator')"),
     body: tool.schema.string().optional().describe("Markdown body for entry-write, plan-write"),
     json: tool.schema.boolean().optional().describe("Output list as JSON"),
     emptyOnly: tool.schema.boolean().optional().describe("Show only empty entries in list"),
-    name: tool.schema.string().optional().describe("Template name for template command: goal, history, plan, act, investigator, planner, developer, reviewer, qa, debugger, reflector"),
+    name: tool.schema.string().optional().describe("Template name for template command: goal, history, plan, act, investigator, planner, developer, reviewer, qa, debugger, reflector, critic, synthesizer"),
     workdir: tool.schema.string().optional().describe("Override worktree root directory (absolute path). Used when operating in a git worktree separate from the main repo."),
   },
   async execute(args, context) {
