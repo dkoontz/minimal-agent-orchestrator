@@ -57,7 +57,7 @@ All cycle I/O goes through the `pdca` tool (an opencode tool, not a CLI command)
 | `entry-check` | `command="entry-check"`, `goal`, `id` | Returns `"true"` or `"false"` |
 | `list` | `command="list"`, `goal`, `json?`, `emptyOnly?` | Lists all entries across all cycles |
 | `last-entry` | `command="last-entry"`, `goal`, `type` | Returns most recent entry ID for type |
-| `template` | `command="template"`, `name` | Returns template text by name: `goal`, `history`, `plan`, `act`, `investigator`, `planner`, `developer`, `reviewer`, `qa`, `debugger`, `reflector`, `critic`, `synthesizer` |
+| `template` | `command="template"`, `name` | Returns template text by name: `goal`, `history`, `plan`, `act`, `investigator`, `planner`, `revision`, `developer`, `reviewer`, `qa`, `debugger`, `reflector`, `critic`, `synthesizer` |
 
 Division of labor:
 
@@ -120,7 +120,7 @@ The user switches to this agent (via Tab) and states their goal. If the user has
 Read the living plan: `pdca(command="plan-read", goal="{goal-name}")`. Choose one:
 
 - **Investigate** — an Open Question blocks progress → dispatch `pdca-investigator` with one scoped question.
-- **Implement** — next increment is clear → produce an increment spec (dispatch `pdca-planner` if non-obvious; otherwise state it inline in the Plan entry), then run the **Critique gate** before any code is written (see Critique gate below). The Developer runs only if the Synthesizer's decision is ACCEPT PLAN.
+- **Implement** — next increment is clear → produce an increment spec (dispatch `pdca-planner` if non-obvious; otherwise state it inline in the Plan entry), then run the **Critique gate** before any code is written (see Critique gate below). The Developer runs only if the Synthesizer's decision is ACCEPT PLAN, or REVISE IN-CYCLE (after the Planner applies the directed edits).
 - **Reflect** — a stuck signal fired (see Rules) → dispatch `pdca-reflector` with `STUCK_SIGNAL: "<one-sentence reason>"`. Reflect cycles produce no code changes; their output is integrated into the plan during Act.
 - **Done** — goal met, no blocking questions → go to Completion.
 
@@ -144,12 +144,12 @@ Agents read the living plan via `pdca(command="plan-read", workdir="{worktree}",
 Agent-specific params (additional parameters in the Task prompt):
 
 - **pdca-investigator** — `QUESTION: <single scoped question>`
-- **pdca-planner** — none
+- **pdca-planner** — none for a first spec. For a `REVISE IN-CYCLE` re-dispatch, `ENTRY_TYPE: revision` and `DIRECTED_EDITS: <the Synthesizer's Required changes, verbatim>`
 - **pdca-critic** — `PLAN_ID: cycle-{N}-planner` (or `cycle-{N}-plan` if the Planner was skipped and the spec is inline)
 - **pdca-synthesizer** — `PLAN_ID: <same as above>`, `CRITIC_ID: cycle-{N}-critic`
-- **pdca-developer** — `INCREMENT_ID: cycle-{N}-plan` or `cycle-{N}-planner` (whichever holds the spec)
-- **pdca-reviewer** — `INCREMENT_ID: ...`, `DEV_ID: cycle-{N}-developer`
-- **pdca-qa** — `INCREMENT_ID: ...`, `DEV_ID: cycle-{N}-developer`
+- **pdca-developer** — `INCREMENT_ID: cycle-{N}-revision` (if a Synthesizer-directed revision was applied in-cycle), else `cycle-{N}-planner`, else `cycle-{N}-plan` — whichever holds the latest spec
+- **pdca-reviewer** — `INCREMENT_ID: <latest spec, same precedence as developer>`, `DEV_ID: cycle-{N}-developer`
+- **pdca-qa** — `INCREMENT_ID: <latest spec, same precedence as developer>`, `DEV_ID: cycle-{N}-developer`
 - **pdca-debugger** — `FAILURE_ID: <entry-id of the failing entry>`
 - **pdca-reflector** — `STUCK_SIGNAL: <one-sentence reason>`
 
@@ -164,10 +164,11 @@ When the Plan choice is **Implement**, every plan — from the Planner or stated
 3. **Synthesize** — dispatch `pdca-synthesizer` with `PLAN_ID` and `CRITIC_ID`. Read `cycle-{N}-synthesizer`.
 4. **Route on the decision:**
    - **ACCEPT PLAN** → proceed to the Developer. Check phase runs after, as normal.
-   - **REVISE PLAN** → skip the Developer and Check (no code was written). Go straight to Act: fold the Synthesizer's **Required changes** into the living plan (as Open Questions, Decisions, or an adjusted Next), commit, `N += 1`, return to Plan. The next cycle re-plans with the Synthesizer's changes as input.
+   - **REVISE IN-CYCLE** → the plan's approach is sound but the Synthesizer named minor edits. Re-dispatch `pdca-planner` with `ENTRY_TYPE: revision` and `DIRECTED_EDITS: <the Synthesizer's Required changes, verbatim>`; it writes `cycle-{N}-revision`. Do **not** re-run the Critique gate — the Synthesizer already adjudicated and the edits are minor and specifically directed. Proceed straight to the Developer with `INCREMENT_ID: cycle-{N}-revision`. At most one in-cycle revision per cycle. If the Planner's **Significance check** reports the directed edits were not minor (a plan gap), treat that as REVISE PLAN: skip the Developer and Check, go to Act, fold the changes into the plan, commit, `N += 1`, return to Plan.
+   - **REVISE PLAN** → the Synthesizer named significant changes (a different approach, a re-scoped increment). Skip the Developer and Check (no code was written). Go straight to Act: fold the Synthesizer's **Required changes** into the living plan (as Open Questions, Decisions, or an adjusted Next), commit, `N += 1`, return to Plan. The next cycle re-plans with the Synthesizer's changes as input.
    - **INVESTIGATE FIRST** → skip the Developer and Check. Go straight to Act: record the question the Synthesizer named into Open Questions, commit, `N += 1`, return to Plan and choose Investigate.
 
-Only one Critique round runs per cycle. A revise does not re-loop the gate within the same cycle — it becomes a new cycle. This keeps entry IDs unique; each cycle holds at most one `critic` and one `synthesizer` entry.
+Only one Critique round runs per cycle, and at most one in-cycle revision (`cycle-{N}-revision`) per cycle. A REVISE PLAN or INVESTIGATE FIRST does not re-loop within the cycle — it becomes a new cycle. This keeps entry IDs unique and predictable; each cycle holds at most one `planner`, one `critic`, one `synthesizer`, and one `revision` entry.
 
 ### Check
 

@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, renameSync, readdirSync } from "node:fs"
 import { join } from "node:path"
 
 const VALID_TYPES = [
-  "plan", "act", "investigator", "planner", "developer",
+  "plan", "act", "investigator", "planner", "revision", "developer",
   "reviewer", "qa", "debugger", "reflector", "critic", "synthesizer"
 ]
 
@@ -83,6 +83,24 @@ Each attempted step, newest last.
     - {unconfirmed assumption — flag for orchestrator, or "none"}
     **Risks**:
     - {way this could fail or reveal a plan gap, or "none"}
+
+## Revision (planner, in-cycle)
+
+    **Title**: {short increment name}
+    **Revises**: cycle-{N}-planner (or cycle-{N}-plan if inline) — {one-line summary of what changed}
+    **Hypothesis**: {what you expect this change to produce}
+    **Scope**:
+    - In: {files/functions in scope}
+    - Out: {what is explicitly out of scope}
+    **Acceptance criteria**:
+    - {observable condition}
+    **Assumptions**:
+    - {unconfirmed assumption — flag for orchestrator, or "none"}
+    **Risks**:
+    - {way this could fail or reveal a plan gap, or "none"}
+    **Synthesizer-directed edits applied**:
+    - {each minor edit from the synthesizer's Required changes — and how it was applied here; or "none"}
+    **Significance check**: {confirm the directed edits stayed minor, or flag a plan gap if they turned significant}
 
 ## Developer
 
@@ -184,6 +202,22 @@ Each attempted step, newest last.
 **Risks**:
 - {way this could fail or reveal a plan gap, or "none"}`,
 
+  revision: `**Title**: {short increment name}
+**Revises**: cycle-{N}-planner (or cycle-{N}-plan if inline) — {one-line summary of what changed}
+**Hypothesis**: {what you expect this change to produce}
+**Scope**:
+- In: {files/functions in scope}
+- Out: {what is explicitly out of scope}
+**Acceptance criteria**:
+- {observable condition}
+**Assumptions**:
+- {unconfirmed assumption — flag for orchestrator, or "none"}
+**Risks**:
+- {way this could fail or reveal a plan gap, or "none"}
+**Synthesizer-directed edits applied**:
+- {each minor edit from the synthesizer's Required changes — and how it was applied here; or "none"}
+**Significance check**: {confirm the directed edits stayed minor, or flag a plan gap if they turned significant — see planner rules}`,
+
   developer: `**Summary**: {one or two sentences describing what you changed}
 **Files changed**:
 - \`{path}\` — {short note}
@@ -254,7 +288,7 @@ Each attempted step, newest last.
 - \`{path}:{line}\` — {load-bearing claim checked, and whether it held or was contradicted}
 - {or "none"}`,
 
-  synthesizer: `**Decision**: ACCEPT PLAN | REVISE PLAN | INVESTIGATE FIRST
+  synthesizer: `**Decision**: ACCEPT PLAN | REVISE IN-CYCLE | REVISE PLAN | INVESTIGATE FIRST
 **Plan under review**: {planner spec title}
 **Critique**: {critic overall assessment, one line}
 **Reasoning**:
@@ -266,8 +300,9 @@ Each attempted step, newest last.
 - {finding} — {one-line reason; do not silently drop any}
 - {or "none"}
 **Required changes**:
-- {specific, actionable change to the plan if REVISE or INVESTIGATE; or "none — plan accepted as-is"}
-**Next**: {proceed to developer | re-plan next cycle | investigator cycle}`,
+- {specific, actionable change to the plan if REVISE IN-CYCLE, REVISE, or INVESTIGATE; for REVISE IN-CYCLE these must be minor edits the Planner can apply without re-scoping; or "none — plan accepted as-is"}
+**Change magnitude**: minor edits, apply in-cycle | significant, re-plan next cycle | {n/a — accepted/investigate}
+**Next**: {proceed to developer | planner revises in-cycle then developer | re-plan next cycle | investigator cycle}`,
 
   act: `**Plan updates**:
 - {what moved where in the plan — e.g. "Q: 'is Session shared?' → Known Facts"}
@@ -365,7 +400,7 @@ export default tool({
       .describe("The pdca operation to perform"),
     goal: tool.schema.string().describe("Kebab-case goal name (e.g. 'fix-login-bug')"),
     cycle: tool.schema.number().optional().describe("Cycle number for cycle-create"),
-    type: tool.schema.string().optional().describe("Entry type for [entry-write, last-entry]: plan, act, investigator, planner, developer, reviewer, qa, debugger, reflector, critic, synthesizer"),
+    type: tool.schema.string().optional().describe("Entry type for [entry-write, last-entry]: plan, act, investigator, planner, revision, developer, reviewer, qa, debugger, reflector, critic, synthesizer"),
     id: tool.schema.string().optional().describe("Entry ID for [entry-read, entry-check] (e.g. 'cycle-2-investigator')"),
     body: tool.schema.string().optional().describe("Markdown body for entry-write, plan-write"),
     json: tool.schema.boolean().optional().describe("Output list as JSON"),
