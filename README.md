@@ -132,6 +132,78 @@ The workflow runs inside opencode.
 You can course-correct at any time — the orchestrator also asks you via a prompt before
 adjusting scope (it never silently drops or shrinks a planned feature).
 
+## Watching a run with `pdca-view`
+
+`pdca-view` is an optional companion terminal UI for browsing the living plan and cycle
+history that the `pdca` tool writes under `goals/`. It reads the JSON files directly — it
+talks to **no agent and spends no tokens** — so you can pull it up at any time to review
+what's been done. It also live-updates as a run writes new entries.
+
+Because opencode's plugin API has no hook for custom sidebar/views and `tui.json` keybinds
+are a closed enum, the viewer runs as a **separate binary** — launch it in a terminal,
+zellij, or tmux split alongside your opencode session. It can't be hotkey-launched from
+inside opencode.
+
+### Build & run
+
+Requires Go.
+
+```sh
+cd pdca-view && go build .      # produces ./pdca-view
+./pdca-view                      # reads ./goals (run from the repo root)
+./pdca-view -g /abs/path/to/goals   # or point at any goals/ directory
+./pdca-view /abs/path/to/goals      # positional argument works too
+```
+
+### What it shows
+
+- A **goal picker**: active goals first, then completed ones (archived to
+  `goals/completed/` by the `pdca complete` command), each tagged `completed`.
+- A **status header** for the selected goal: current cycle, phase, and the plan's `Next:`
+  line, parsed from the living plan's `## Status` block.
+- A **sidebar** of documents for that goal — the living plan (`Plan (in progress)` or
+  `Plan (completed)`) followed by every cycle entry in canonical PDCA order, each showing
+  its timestamp.
+- A **detail pane** rendering the selected entry's markdown body (via glamour).
+
+### Keys
+
+**Goal picker**
+
+| Key | Action |
+|---|---|
+| `↑` `↓` | Select a goal |
+| `Enter` | Open the goal |
+| `q` / `Esc` | Quit |
+
+**Browsing a goal**
+
+| Key | Action |
+|---|---|
+| `←` `→` | Move between entries (sidebar) |
+| `↑` `↓` / `k` `j` | Scroll the detail one line |
+| `PgUp` `PgDn` | Scroll one page |
+| `u` `d` | Scroll half a page |
+| `g` `G` | Top / bottom of the entry |
+| `[` `]` | Previous / next goal |
+| `r` | Force reload from disk |
+| `Esc` | Back to the goal picker |
+| `q` / `Ctrl+C` | Quit |
+
+Scroll position is preserved across background refreshes (the watcher reloads every ~1.5s
+and on file changes), so the view won't jump while you read. An explicit entry change
+always starts at the top.
+
+### Headless / piping
+
+`-dump` renders every goal's status and entries as plain text to stdout and exits — handy
+for scripting, `less`, or reviewing without a TTY:
+
+```sh
+./pdca-view -dump                 # reads ./goals
+./pdca-view -dump -g ../other-repo/goals | less
+```
+
 ## Repository layout
 
 ```
@@ -149,6 +221,12 @@ opencode/
 │   └── pdca-reflector.md        # subagent — reframes when stuck
 └── tools/
     └── pdca.ts                  # the `pdca` tool: living-plan + history I/O
+
+pdca-view/                       # optional companion TUI (Go) — browse plan/cycle state, no agent
+├── go.mod
+├── store.go                     # reads goals/*.json + goals/completed/*.json
+├── browser.go                   # Bubble Tea master-detail UI
+└── main.go                      # flags, fs-watch reload, -dump mode
 ```
 
 All plan and cycle state is read and written through the `pdca` tool (`plan-read`,
